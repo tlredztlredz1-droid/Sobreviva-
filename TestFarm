@@ -1,1 +1,128 @@
+-- ============================================================
+-- Serviços
+-- ============================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- ============================================================
+-- Config
+-- ============================================================
+local TweenSpeed = 30
+local noclipConnection
+
+-- ============================================================
+-- Noclip
+-- ============================================================
+local function EnableNoclip()
+    if noclipConnection then return end
+
+    noclipConnection = RunService.Stepped:Connect(function()
+        local Character = LocalPlayer.Character
+        if not Character then return end
+
+        for _, v in pairs(Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end)
+end
+
+local function DisableNoclip()
+    if noclipConnection then
+        noclipConnection:Disconnect()
+        noclipConnection = nil
+    end
+end
+
+-- ============================================================
+-- Encontrar Jellyfish
+-- ============================================================
+local function FindBestJellyfish()
+    local Character = LocalPlayer.Character
+    local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+    if not HRP then
+        return nil
+    end
+
+    local Closest
+    local Distance = math.huge
+
+    for _, v in pairs(workspace.Map.Jellyfish:GetDescendants()) do
+        if v.Name == "VisualModel" then
+            local Part = v:FindFirstChildWhichIsA("BasePart")
+
+            if Part then
+                local Magnitude = (HRP.Position - Part.Position).Magnitude
+
+                if Magnitude < Distance then
+                    Distance = Magnitude
+                    Closest = Part
+                end
+            end
+        end
+    end
+
+    return Closest
+end
+
+-- ============================================================
+-- Tween
+-- ============================================================
+local function TweenTo(Position)
+    local Character = LocalPlayer.Character
+    local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+    if not HRP then
+        return
+    end
+
+    local Distance = (HRP.Position - Position).Magnitude
+
+    local Tween = TweenService:Create(
+        HRP,
+        TweenInfo.new(
+            Distance / TweenSpeed,
+            Enum.EasingStyle.Linear
+        ),
+        {
+            CFrame = CFrame.new(Position)
+        }
+    )
+
+    Tween:Play()
+    Tween.Completed:Wait()
+end
+
+-- ============================================================
+-- Loop Principal
+-- ============================================================
+task.spawn(function()
+    while task.wait(0.5) do
+
+        if not _G.AutoTeleportJellyfish then
+            DisableNoclip()
+            continue
+        end
+
+        local Character = LocalPlayer.Character
+        local HRP = Character and Character:FindFirstChild("HumanoidRootPart")
+
+        if not Character or not HRP then
+            continue
+        end
+
+        local Jellyfish = FindBestJellyfish()
+
+        if Jellyfish then
+            EnableNoclip()
+
+            TweenTo(Jellyfish.Position + Vector3.new(0, 5, 0))
+        end
+    end
+end)
 
