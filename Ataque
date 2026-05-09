@@ -1,0 +1,171 @@
+-- =========================================
+-- AUTO ATAQUE JELLYFISH + AUTO CLICK TELA
+-- =========================================
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local VirtualUser = game:GetService("VirtualUser")
+
+-- =========================================
+-- CONFIG
+-- =========================================
+
+local ATTACK_ID = 82
+local ATTACK_TYPE = "Attack"
+local ATTACK_DELAY = 0.06
+
+_G.AutoAttackJellyfish = false
+_G.AutoScreenClick = false
+
+-- =========================================
+-- REMOTES
+-- =========================================
+
+local NetworkEvent = ReplicatedStorage:WaitForChild("src", 5)
+    :WaitForChild("Packages")
+    :WaitForChild("_Index")
+    :WaitForChild("raild3x_netwire@0.3.4")
+    :WaitForChild("netwire")
+    :WaitForChild("Remotes")
+    :WaitForChild("TableReplicator")
+    :WaitForChild("RE")
+    :WaitForChild("NetworkEvent")
+
+local TryDamage = ReplicatedStorage:WaitForChild("GearIntermediaries")
+    :WaitForChild("4886847121")
+    :WaitForChild("TornNet")
+    :WaitForChild("MeleeGear_RemoteComponent")
+    :WaitForChild("RF")
+    :WaitForChild("TryDamageEntity")
+
+-- =========================================
+-- JELLYFISH FOLDER
+-- =========================================
+
+local jellyfishFolder = Workspace:WaitForChild("Map")
+    :WaitForChild("Jellyfish")
+    :WaitForChild("BikiniBottom")
+    :WaitForChild("Jellyfish1")
+    :WaitForChild("Entities")
+
+-- =========================================
+-- PEGAR TODOS JELLYFISH
+-- =========================================
+
+local function GetAllJellyfish()
+    local jellys = {}
+
+    for _, obj in ipairs(jellyfishFolder:GetDescendants()) do
+        if obj:IsA("Model") then
+            local hum = obj:FindFirstChildOfClass("Humanoid")
+
+            if hum and hum.Health > 0 then
+                table.insert(jellys, obj)
+            end
+        end
+    end
+
+    local parentFolder = jellyfishFolder.Parent
+
+    for _, obj in ipairs(parentFolder:GetDescendants()) do
+        if obj:IsA("Model") then
+            local hum = obj:FindFirstChildOfClass("Humanoid")
+
+            if hum and hum.Health > 0 then
+                if not table.find(jellys, obj) then
+                    table.insert(jellys, obj)
+                end
+            end
+        end
+    end
+
+    return jellys
+end
+
+-- =========================================
+-- ATAQUE
+-- =========================================
+
+local function AttackAll()
+
+    for _, jelly in ipairs(GetAllJellyfish()) do
+
+        local hum = jelly:FindFirstChildOfClass("Humanoid")
+
+        if hum and hum.Health > 0 then
+
+            pcall(function()
+                NetworkEvent:FireServer(ATTACK_ID, ATTACK_TYPE)
+            end)
+
+            local hitPos
+
+            if jelly.PrimaryPart then
+                hitPos = jelly.PrimaryPart.Position
+            else
+                hitPos = jelly:GetPivot().Position
+            end
+
+            pcall(function()
+                TryDamage:InvokeServer(jelly, hitPos)
+            end)
+        end
+    end
+end
+
+-- =========================================
+-- AUTO CLICK NA TELA
+-- =========================================
+
+local function ScreenClick()
+
+    VirtualUser:CaptureController()
+
+    VirtualUser:Button1Down(
+        Vector2.new(500, 500),
+        workspace.CurrentCamera.CFrame
+    )
+
+    task.wait()
+
+    VirtualUser:Button1Up(
+        Vector2.new(500, 500),
+        workspace.CurrentCamera.CFrame
+    )
+end
+
+-- =========================================
+-- LOOP ATAQUE
+-- =========================================
+
+task.spawn(function()
+    while true do
+
+        if _G.AutoAttackJellyfish then
+            pcall(function()
+                AttackAll()
+            end)
+        end
+
+        task.wait(ATTACK_DELAY)
+    end
+end)
+
+-- =========================================
+-- LOOP CLICK
+-- =========================================
+
+task.spawn(function()
+    while true do
+
+        if _G.AutoScreenClick then
+            pcall(function()
+                ScreenClick()
+            end)
+        end
+
+        task.wait(0.03)
+    end
+end)
+
+print("✅ Auto Jellyfish + Auto Click Tela carregado!")
