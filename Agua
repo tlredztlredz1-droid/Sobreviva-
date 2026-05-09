@@ -1,1 +1,136 @@
+-- [[ SCRIPT DE CÓDIGO ABERTO ]] --
+local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/linhmcfake/LuaLibrary/refs/heads/main/RedzLibraryV5.lua"))()
 
+-- Criação da Janela Principal
+local Window = redzlib:MakeWindow({
+    Title = "shadowHub : Blox Fruits",
+    SubTitle = "by Discord NightShadow",
+    SaveFolder = "shadowhub_config.json",
+    Theme = "Dark"
+})
+
+-- Botão de Minimizar
+Window:AddMinimizeButton({
+    Button = {
+        Image = "rbxassetid://81996994508174",
+        BackgroundTransparency = 0
+    },
+    Corner = { CornerRadius = UDim.new(0, 5) }
+})
+
+-- Abas
+local TabDiscord  = Window:MakeTab({"Discord", "rbxassetid://86641106722992"})
+local TabFarm     = Window:MakeTab({"Farm", "home"})
+local TabEvent    = Window:MakeTab({"Evento", "waves"})
+local TabItems    = Window:MakeTab({"Itens", "swords"})
+local TabStats    = Window:MakeTab({"Status", "gem"})
+local TabSettings = Window:MakeTab({"Config", "settings"})
+
+-- ============================================================
+-- Toggle » Auto Teleport Jellyfish
+-- ============================================================
+TabFarm:AddToggle({
+    Name = "Auto Teleport Jellyfish",
+    Description = "Teleporta automaticamente para Jellyfish (mais estável)",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoTeleportJellyfish = Value
+    end
+})
+
+-- ============================================================
+-- Serviços
+-- ============================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- ============================================================
+-- Função para encontrar o melhor Jellyfish
+-- ============================================================
+local function findBestJellyfish()
+    local jellyfishMap = workspace:FindFirstChild("Map", true) and workspace.Map:FindFirstChild("Jellyfish")
+    if not jellyfishMap then return nil end
+
+    local candidates = {}
+
+    -- Prioridade 1: JellyfishFields
+    local fields = jellyfishMap:FindFirstChild("JellyfishFields")
+    if fields then
+        for _, part in ipairs(fields:GetDescendants()) do
+            if part:IsA("BasePart") and part.Transparency < 1 then
+                table.insert(candidates, part)
+                break
+            end
+        end
+    end
+
+    -- Prioridade 2: Jellyfish nos Entities (Bikini Bottom)
+    if #candidates == 0 then
+        for _, entity in ipairs(jellyfishMap:GetDescendants()) do
+            if entity.Name == "Jellyfish" and entity:FindFirstChild("VisualModel") then
+                local model = entity.VisualModel
+                local part = model:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    table.insert(candidates, part)
+                end
+            end
+        end
+    end
+
+    -- Pega o mais próximo do jogador
+    local character = LocalPlayer.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+
+    local closest = nil
+    local minDistance = math.huge
+
+    for _, part in ipairs(candidates) do
+        local distance = (part.Position - hrp.Position).Magnitude
+        if distance < minDistance then
+            minDistance = distance
+            closest = part
+        end
+    end
+
+    return closest
+end
+
+-- ============================================================
+-- Função de Teleporte
+-- ============================================================
+local function teleportToJellyfish()
+    local targetPart = findBestJellyfish()
+    if not targetPart then 
+        -- warn("[Teleport] Nenhum Jellyfish encontrado.")
+        return 
+    end
+
+    local character = LocalPlayer.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+
+    if hrp then
+        local destination = targetPart.CFrame * CFrame.new(0, 8, 0) -- um pouco acima
+        hrp.CFrame = destination
+        -- print("[Teleport] ✅ Teleportado para Jellyfish")
+    end
+end
+
+-- ============================================================
+-- Loop Principal
+-- ============================================================
+task.spawn(function()
+    while task.wait(0.8) do  -- 0.8s é bom equilíbrio
+        if not _G.AutoTeleportJellyfish then continue end
+
+        local character = LocalPlayer.Character
+        if not character or not character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.CharacterAdded:Wait()
+            task.wait(1)
+            continue
+        end
+
+        teleportToJellyfish()
+    end
+end)
