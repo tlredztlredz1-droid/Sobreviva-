@@ -1,0 +1,95 @@
+TabFarm:AddToggle({
+    Name = "Auto Magnet / Pull Loot",
+    Description = "Puxa todos os itens de loot automaticamente",
+    Default = false,
+
+    Callback = function(state)
+        getgenv().AutoMagnet = state
+
+        if state then
+            task.spawn(function()
+
+                local Players = game:GetService("Players")
+                local RunService = game:GetService("RunService")
+
+                local player = Players.LocalPlayer
+                local character = player.Character or player.CharacterAdded:Wait()
+                local rootPart = character:WaitForChild("HumanoidRootPart")
+
+                -- CONFIG
+                local PULL_SPEED = 5
+                local PULL_RANGE = 80
+                local COLLECT_RANGE = 5 -- distância 5
+
+                local connection
+                connection = RunService.Heartbeat:Connect(function(dt)
+
+                    if not getgenv().AutoMagnet then
+                        connection:Disconnect()
+                        return
+                    end
+
+                    character = player.Character
+                    if not character then return end
+
+                    rootPart = character:FindFirstChild("HumanoidRootPart")
+                    if not rootPart then return end
+
+                    local lootFolder =
+                        workspace:FindFirstChild("LootDrops")
+                        or workspace:FindFirstChild("Drops")
+
+                    if not lootFolder then return end
+
+                    for _, item in ipairs(lootFolder:GetChildren()) do
+                        pcall(function()
+
+                            local core
+
+                            if item:FindFirstChild("VisualModel")
+                                and item.VisualModel:FindFirstChild("Core") then
+
+                                core = item.VisualModel.Core
+
+                            elseif item:FindFirstChild("Core") then
+                                core = item.Core
+
+                            else
+                                core = item:FindFirstChildWhichIsA("BasePart")
+                            end
+
+                            if not core then return end
+
+                            local distance =
+                                (core.Position - rootPart.Position).Magnitude
+
+                            if distance <= PULL_RANGE then
+
+                                local direction =
+                                    (rootPart.Position - core.Position).Unit
+
+                                core.CFrame =
+                                    core.CFrame + direction * PULL_SPEED
+
+                                -- distância 5
+                                if distance <= COLLECT_RANGE then
+                                    firetouchinterest(
+                                        rootPart,
+                                        core,
+                                        0
+                                    )
+
+                                    firetouchinterest(
+                                        rootPart,
+                                        core,
+                                        1
+                                    )
+                                end
+                            end
+                        end)
+                    end
+                end)
+            end)
+        end
+    end
+})
