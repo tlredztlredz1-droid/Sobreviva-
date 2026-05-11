@@ -1,0 +1,196 @@
+-- [[ SCRIPT DE CÓDIGO ABERTO ]] --
+local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/linhmcfake/LuaLibrary/refs/heads/main/RedzLibraryV5.lua"))()
+
+-- Criação da Janela Principal
+local Window = redzlib:MakeWindow({
+    Title = "shadowHub : Blox Fruits",
+    SubTitle = "by Discord NightShadow",
+    SaveFolder = "shadowhub_config.json",
+    Theme = "Dark"
+})
+
+-- Botão de Minimizar
+Window:AddMinimizeButton({
+    Button = {
+        Image = "rbxassetid://81996994508174",
+        BackgroundTransparency = 0
+    },
+    Corner = { CornerRadius = UDim.new(0, 5) }
+})
+
+-- Abas
+local TabDiscord  = Window:MakeTab({"Discord", "rbxassetid://86641106722992"})
+local TabFarm     = Window:MakeTab({"Farm", "home"})
+local TabEvent    = Window:MakeTab({"Evento", "waves"})
+local TabItems    = Window:MakeTab({"Itens", "swords"})
+local TabStats    = Window:MakeTab({"Status", "gem"})
+local TabSettings = Window:MakeTab({"Config", "settings"})
+
+-- ============================================================
+-- Toggle » Auto Tween Jellyfish
+-- ============================================================
+
+TabFarm:AddToggle({
+    Name = "Auto Tween Jellyfish",
+    Description = "Vai até Jellyfish com TweenSpeed 30 + Noclip",
+    Default = false,
+
+    Callback = function(Value)
+        _G.AutoTeleportJellyfish = Value
+        _G.AutoScreenClick = Value
+        _G.AutoAttackJellyfish = Value
+        _G.ToolTornNet = Value
+
+        if Value then
+            print("✅ Auto Jellyfish + Auto Equip TornNet ativado")
+        else
+            print("❌ Auto Jellyfish desativado")
+        end
+    end
+})
+
+-- ============================================================
+-- Auto Equipar TornNet (Sempre funcionando)
+-- ============================================================
+
+task.spawn(function()
+    while true do
+        if _G.ToolTornNet then
+            pcall(function()
+                local player = game.Players.LocalPlayer
+                if not player then return end
+                
+                local character = player.Character
+                if not character then 
+                    task.wait(1)
+                    return 
+                end
+
+                local backpack = player:FindFirstChild("Backpack")
+                if not backpack then return end
+
+                local toolName = "TornNet"
+
+                -- Já está equipado?
+                if character:FindFirstChild(toolName) then
+                    return
+                end
+
+                -- Tenta equipar
+                local tool = backpack:FindFirstChild(toolName)
+                if tool and tool:IsA("Tool") then
+                    tool.Parent = character
+                    -- print("TornNet equipado automaticamente")
+                end
+            end)
+        end
+        task.wait(0.7) -- Equilibra entre velocidade e performance
+    end
+end)
+
+-- ============================================================
+-- Recarrega automaticamente ao morrer / reset
+-- ============================================================
+
+local player = game.Players.LocalPlayer
+player.CharacterAdded:Connect(function()
+    task.wait(1.5) -- Espera personagem carregar
+    if _G.ToolTornNet then
+        print("🔄 Personagem renasceu - Auto Equip reativado")
+    end
+end)
+
+-- ============================================================
+-- Carrega os scripts externos
+-- ============================================================
+
+task.spawn(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/tlredztlredz1-droid/Sobreviva-/main/TestFarm"))()
+    end)
+end)
+
+task.spawn(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/tlredztlredz1-droid/Sobreviva-/main/Ataque"))()
+    end)
+end)
+
+print("Script Auto Jellyfish carregado com sucesso!")
+
+TabFarm:AddToggle({
+    Name = "Auto Magnet / Pull Loot",
+    Description = "Teleporta os itens direto pra posição",
+    Default = false,
+
+    Callback = function(state)
+        getgenv().AutoMagnet = state
+
+        if state then
+            task.spawn(function()
+
+                local Players = game:GetService("Players")
+                local RunService = game:GetService("RunService")
+
+                local player = Players.LocalPlayer
+                local character = player.Character or player.CharacterAdded:Wait()
+                local rootPart = character:WaitForChild("HumanoidRootPart")
+
+                -- POSIÇÃO DOS ITENS
+                local ITEM_POSITION = Vector3.new(
+       -32.00947952270508, 11.65832233428955, -51.51183319091797
+                )
+
+                local connection
+                connection = RunService.Heartbeat:Connect(function()
+
+                    if not getgenv().AutoMagnet then
+                        connection:Disconnect()
+                        return
+                    end
+
+                    character = player.Character
+                    if not character then return end
+
+                    rootPart = character:FindFirstChild("HumanoidRootPart")
+                    if not rootPart then return end
+
+                    local lootFolder =
+                        workspace:FindFirstChild("LootDrops")
+                        or workspace:FindFirstChild("Drops")
+
+                    if not lootFolder then return end
+
+                    for _, item in ipairs(lootFolder:GetChildren()) do
+                        pcall(function()
+
+                            local core
+
+                            -- Procura a peça principal do item
+                            if item:FindFirstChild("VisualModel")
+                                and item.VisualModel:FindFirstChild("Core") then
+
+                                core = item.VisualModel.Core
+
+                            elseif item:FindFirstChild("Core") then
+                                core = item.Core
+
+                            else
+                                core = item:FindFirstChildWhichIsA("BasePart")
+                            end
+
+                            if core and core:IsA("BasePart") then
+
+                                -- TELEPORTA ITEM PRA POSIÇÃO
+                                core.CFrame = CFrame.new(ITEM_POSITION)
+
+                                -- Opcional: leva pro player depois
+                                -- core.CFrame = rootPart.CFrame
+                            end
+                        end)
+                    end
+                end)
+            end)
+        end
+    end
+})
